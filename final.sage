@@ -172,9 +172,11 @@ positive_range_graph = Graphics()
 intersection_range_graphs = [Graphics()]
 
 
-def update_ranges_by_solving_det(hankel, current_ranges, hue_value):
+def update_ranges_by_solving_det(hankel, current_ranges, search_range,
+                                 hue_value):
     global function_graph
     global positive_range_graph
+    xmin, xmax = search_range
     depth = hankel.nrows()
     begin('calculate det')
     f = hankel.det()
@@ -228,60 +230,63 @@ def update_ranges_by_solving_det(hankel, current_ranges, hue_value):
     return intersections(positive_ranges, current_ranges)
 
 
-min_depth = 2
-max_depth = 5
-xmin = -0.7
-xmax = 0.5
-current_ranges = [[xmin, xmax]]
-offset = 0
-accepted_range_size = 10 ^ -5
+def find_possible_energy(depth_range, search_range):
+    min_depth, max_depth = depth_range
+    current_ranges = [list(search_range)]
+    offset = 0
+    accepted_range_size = 10 ^ -5
 
-for depth in range(min_depth, max_depth + 1):
-    print(f'depth:{depth}')
-    begin(f'depth:{depth}')
+    for depth in range(min_depth, max_depth + 1):
+        print(f'depth:{depth}')
+        begin(f'depth:{depth}')
 
-    hue_value = (depth - min_depth) / (max_depth - min_depth + 1)
+        hue_value = (depth - min_depth) / (max_depth - min_depth + 1)
 
-    stored_current_ranges = load_current_ranges(l, depth)
-    if stored_current_ranges is not None:
-        current_ranges = stored_current_ranges
-    else:
-        begin('generate matrix')
-        hankel = matrix.hankel(
-            [expected_distance(i + offset, l) for i in range(depth)], [
-                expected_distance(i + offset + depth - 1, l)
-                for i in range(1, depth)
-            ], SR)
-        end('generate matrix')
-
-        if depth >= 8:
-            current_ranges = update_ranges_by_probing(hankel, current_ranges,
-                                                      accepted_range_size)
+        stored_current_ranges = load_current_ranges(l, depth)
+        if stored_current_ranges is not None:
+            current_ranges = stored_current_ranges
         else:
-            current_ranges = update_ranges_by_solving_det(
-                hankel, current_ranges, hue_value)
-        pprint([[Real20(low), Real20(high)] for low, high in current_ranges])
-        save_current_ranges(l, depth, current_ranges)
+            begin('generate matrix')
+            hankel = matrix.hankel(
+                [expected_distance(i + offset, l) for i in range(depth)], [
+                    expected_distance(i + offset + depth - 1, l)
+                    for i in range(1, depth)
+                ], SR)
+            end('generate matrix')
 
-    if depth % 10 == 1:
-        intersection_range_graphs.append(Graphics())
-    for current_range in current_ranges:
-        dots = [(x, depth) for x in current_range]
-        intersection_range_graphs[0] += line(dots, hue=hue_value)
-        intersection_range_graphs[0] += points(dots, hue=hue_value)
-        low, high = current_range
-        if high - low <= 10 ^ -4:
-            # Do not show the singular point in graph for high depths.
-            continue
-        for i, _ in enumerate(intersection_range_graphs[1:], 1):
-            intersection_range_graphs[i] += line(dots, hue=hue_value)
-            intersection_range_graphs[i] += points(dots, hue=hue_value)
+            if depth >= 8:
+                current_ranges = update_ranges_by_probing(
+                    hankel, current_ranges, accepted_range_size)
+            else:
+                current_ranges = update_ranges_by_solving_det(
+                    hankel, current_ranges, search_range, hue_value)
+            pprint([[Real20(low), Real20(high)] for low, high in current_ranges
+                   ])
+            save_current_ranges(l, depth, current_ranges)
 
-    end(f'depth:{depth}')
-    print()
+        if depth % 10 == 1:
+            intersection_range_graphs.append(Graphics())
+        for current_range in current_ranges:
+            dots = [(x, depth) for x in current_range]
+            intersection_range_graphs[0] += line(dots, hue=hue_value)
+            intersection_range_graphs[0] += points(dots, hue=hue_value)
+            low, high = current_range
+            if high - low <= 10 ^ -4:
+                # Do not show the singular point in graph for high depths.
+                continue
+            for i, _ in enumerate(intersection_range_graphs[1:], 1):
+                intersection_range_graphs[i] += line(dots, hue=hue_value)
+                intersection_range_graphs[i] += points(dots, hue=hue_value)
 
-filename_prefix = f'depth_{min_depth}_{max_depth}-l_{l}'
-save_and_show_graph(function_graph, f'{filename_prefix}.png')
-save_and_show_graph(positive_range_graph, f'{filename_prefix}-positive.png')
-for i, graph in enumerate(intersection_range_graphs):
-    save_and_show_graph(graph, f'{filename_prefix}-intersection_{i}.png')
+        end(f'depth:{depth}')
+        print()
+
+    filename_prefix = f'depth_{min_depth}_{max_depth}-l_{l}'
+    save_and_show_graph(function_graph, f'{filename_prefix}.png')
+    save_and_show_graph(positive_range_graph, f'{filename_prefix}-positive.png')
+    for i, graph in enumerate(intersection_range_graphs):
+        save_and_show_graph(graph, f'{filename_prefix}-intersection_{i}.png')
+
+
+if __name__ == '__main__':
+    find_possible_energy((2, 5), (-0.7, 0.5))
