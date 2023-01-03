@@ -4,7 +4,7 @@ from pathlib import Path
 from sage.misc.persist import save
 from sage.plot.plot import plot
 
-from hankel_matrix import *
+from symbolic_matrix import *
 from precision import *
 
 root_folder = Path(__file__).parent
