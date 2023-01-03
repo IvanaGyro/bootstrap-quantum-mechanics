@@ -1,31 +1,20 @@
-from functools import cache
-from sage.all_cmdline import *
 import operator
-import time
+from functools import cache
 from pprint import pprint
-from pathlib import Path
-import os
 
 import sage.libs.ecl
+from sage.all_cmdline import *
+
+from benchmark import *
+from graph import *
+from hankel_matrix import *
+from precalculation import *
+from precision import *
 
 sage.libs.ecl.ecl_eval("(ext:set-limit 'ext:heap-size 0)")
 
-time_table = {}
-
-
-def begin(name):
-    time_table[name] = time.time()
-
-
-def end(name):
-    print(f'{name}: {time.time() - time_table[name]}')
-    del time_table[name]
-
-
 l = 1
 energy = var('E', domain='real')
-Real300 = RealField(10000)
-Real20 = RealField(20)
 
 
 @cache
@@ -72,35 +61,6 @@ def intersections(a, b):
     return ranges
 
 
-def get_matrix_variable(mat):
-    for i in range(mat.nrows()):
-        for j in range(mat.ncols()):
-            vars = mat[i][j].variables()
-            if len(vars):
-                return vars[0]
-    raise ValueError(f'No variable in the matrix. {mat}')
-
-
-def substitute_by_real(mat, value):
-    x = get_matrix_variable(mat)
-    return mat.substitute({x: value}).apply_map(Real300)
-
-
-def evaluate_det(mat, value):
-    return substitute_by_real(mat, value).det()
-
-
-root_folder = Path(__file__).parent
-image_folder = root_folder / 'images'
-dump_foler = root_folder / 'dumps'
-os.makedirs(image_folder, exist_ok=True)
-os.makedirs(dump_foler, exist_ok=True)
-
-def save_and_show_graph(graph, filename):
-    save(graph, str(image_folder / filename))
-    os.system(f'display "{image_folder / filename}" &')
-
-
 def newton_method(input_matrix,
                   derivative_matrix,
                   init_guess,
@@ -133,18 +93,6 @@ def newton_method(input_matrix,
         real_matrix = substitute_by_real(input_matrix, current_guess)
         fc = real_matrix.det()
     return current_guess, first_evaluation, iterates
-
-
-def show_interested_area(depth, weight_hankel, x_range):
-    truncked_x_range = [Real20(x) for x in x_range]
-    g = plot(
-        lambda v: evaluate_det(weight_hankel, v),
-        x_range,
-        plot_points=200,
-        title=f'depth:{depth} {truncked_x_range}',
-    )
-    save_and_show_graph(
-        g, f'depth_{depth}-{truncked_x_range[0]}_{truncked_x_range[1]}.png')
 
 
 def update_ranges_by_probing(hankel, current_ranges, accepted_range_size):
@@ -314,19 +262,6 @@ def update_ranges_by_solving_det(hankel, current_ranges, hue_value):
     return intersections(positive_ranges, current_ranges)
 
 
-def save_current_ranges(depth, current_ranges):
-    filename = f'current_ranges-l_{l}-depth_{depth}.sobj'
-    save(current_ranges,  str(dump_foler / filename))
-
-
-def load_current_ranges(depth):
-    filename = f'current_ranges-l_{l}-depth_{depth}.sobj'
-    try:
-        return load(str(dump_foler / filename))
-    except FileNotFoundError:
-        return None
-
-
 min_depth = 2
 max_depth = 5
 xmin = -0.7
@@ -341,7 +276,7 @@ for depth in range(min_depth, max_depth + 1):
 
     hue_value = (depth - min_depth) / (max_depth - min_depth + 1)
 
-    stored_current_ranges = load_current_ranges(depth)
+    stored_current_ranges = load_current_ranges(l, depth)
     if stored_current_ranges is not None:
         current_ranges = stored_current_ranges
     else:
@@ -360,7 +295,7 @@ for depth in range(min_depth, max_depth + 1):
             current_ranges = update_ranges_by_solving_det(
                 hankel, current_ranges, hue_value)
         pprint([[Real20(low), Real20(high)] for low, high in current_ranges])
-        save_current_ranges(depth, current_ranges)
+        save_current_ranges(l, depth, current_ranges)
 
     if depth % 10 == 1:
         intersection_range_graphs.append(Graphics())
@@ -378,7 +313,6 @@ for depth in range(min_depth, max_depth + 1):
 
     end(f'depth:{depth}')
     print()
-
 
 filename_prefix = f'depth_{min_depth}_{max_depth}-l_{l}'
 save_and_show_graph(function_graph, f'{filename_prefix}.png')
