@@ -1,4 +1,9 @@
+from sage.rings.infinity import infinity
+
 from precision import *
+
+_zero = Real300(0)
+_infinity = Real300(infinity)
 
 
 def get_matrix_variable(mat):
@@ -38,10 +43,13 @@ def newton_method(input_matrix,
     for _ in range(maxiter - 1):
         # if abs(fc) < eps:
         #     break
-        if fc == 0:
+        # Comparisons between RealField numbers of the same precision are 6
+        # times faster than comparisons between RealField numbers and Python
+        # integers.
+        if fc == _zero:
             break
         diff = fc / evaluate_derivative_det(real_matrix, fc, current_guess)
-        if abs(diff) == infinity:
+        if abs(diff) == _infinity:
             raise ValueError('get infinity')
         current_guess -= diff
         iterates.append(current_guess)
