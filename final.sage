@@ -133,14 +133,14 @@ def update_ranges_by_probing(hankel, current_ranges, accepted_range_size):
                 for guess in candidates:
                     begin('newton method')
                     root, first_evaluation, iterates = newton_method(
-                        weight_hankel, derivative_hankel, guess, 10 ^ -50,
-                        accepted_range_size)
+                        weight_hankel, derivative_hankel, guess,
+                        accepted_range_size, (prev_x, current_x))
                     end('newton method')
                     print(f'first_evaluation:{Real20(first_evaluation)}')
                     print(f'iterates: {len(iterates)}')
                     if len(iterates) > 20:
                         pprint([Real20(i) for i in iterates])
-                    if root >= prev_x and root <= current_x:
+                    if root is not None and root >= prev_x and root <= current_x:
                         break
                 else:
                     print(
@@ -179,18 +179,21 @@ def update_ranges_by_solving_det(hankel, current_ranges, search_range,
     xmin, xmax = search_range
     depth = hankel.nrows()
     begin('calculate det')
+    # using hessenberg significatly increase solving time...
+    # f = hankel.det(algorithm='hessenberg')
     f = hankel.det()
+    f = SR(f)
     end('calculate det')
-    # print(f)
-
-    begin('simplify')
-    f = f.simplify_full()
-    # f = expand(f)
-    end('simplify')
     print(f)
 
+    begin('simplify')
+    # f = f.simplify_full()
+    # f = expand(f)
+    end('simplify')
+    # print(f)
+
     begin('solve inequation')
-    positive_solutions = solve(f >= 0, energy)
+    positive_solutions = solve(f > 0, f.variables()[0])
     end('solve inequation')
 
     begin('find intersections')

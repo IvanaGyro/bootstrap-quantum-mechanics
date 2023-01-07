@@ -40,17 +40,16 @@ def evaluate_derivative_det(mat: Matrix_symbolic_dense,
 def newton_method(mat: Matrix_symbolic_dense,
                   derivative_mat: Matrix_symbolic_dense,
                   init_guess: RealNumber,
-                  eps: RealNumber,
                   epsx: RealNumber,
+                  x_range: tuple[RealNumber, RealNumber],
                   maxiter: int = 100):
+    x_min, x_max = x_range
     current_guess = init_guess
     iterates = [current_guess]
     real_matrix = substitute_by_real(mat, current_guess)
     fc = real_matrix.det()
     first_evaluation = fc
     for _ in range(maxiter - 1):
-        # if abs(fc) < eps:
-        #     break
         # Comparisons between RealField numbers of the same precision are 6
         # times faster than comparisons between RealField numbers and Python
         # integers.
@@ -62,9 +61,14 @@ def newton_method(mat: Matrix_symbolic_dense,
             raise ValueError('get infinity')
         current_guess -= diff
         iterates.append(current_guess)
-        if len(iterates) >= 5 and max(iterates[-5:]) - min(
-                iterates[-5:]) < epsx:
-            break
+        if len(iterates) >= 5:
+            try_max = max(iterates[-5:])
+            try_min = min(iterates[-5:])
+            if try_max < x_min or try_min > x_max:
+                current_guess = None
+                break
+            if try_max - try_min < epsx:
+                break
         real_matrix = substitute_by_real(mat, current_guess)
         fc = real_matrix.det()
     return current_guess, first_evaluation, iterates
