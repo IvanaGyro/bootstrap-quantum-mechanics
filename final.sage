@@ -14,8 +14,6 @@ from precision import *
 sage.libs.ecl.ecl_eval("(ext:set-limit 'ext:heap-size 0)")
 
 l = 1
-ploy_real = Real300['energy']
-(energy,) = ploy_real._first_ngens(1)
 poly_int = QQ['energy']
 (energy,) = poly_int._first_ngens(1)
 
@@ -47,7 +45,6 @@ def expected_distance(n, l, ring=SR):
         - 4 * (2 * (n + 1) - 1) * expected_distance(n - 1, l) \
         - n * ((n + 1) * (n - 1) - 4 * l * (l + 1)) * expected_distance(n - 2, l)
         ) / (8 * (n + 1) * energy_symbol)).full_simplify()
-    print(f)
     end(f'expected_distance({n}, {l}, {ring})')
     return f
 
@@ -84,21 +81,16 @@ def intersections(a, b):
 
 def update_ranges_by_probing(hankel, current_ranges, accepted_range_size):
     depth = hankel.nrows()
-    begin('weight_hankel')
-    weight_hankel = matrix(depth, depth, [
-        hankel[i][j] / hankel[0][j] / hankel[i][0]
-        for i in range(depth)
-        for j in range(depth)
-    ])
-    end('weight_hankel')
 
-    interested_areas = {
-        14: [[-0.12952, -0.12501], [-0.035683, -0.027594],
-             [-0.024358, -0.0033258]],
-    }
-    if depth in interested_areas:
-        for x_range in interested_areas[depth]:
-            show_interested_area(depth, weight_hankel, x_range)
+    # There is no difference after calling `.reduce()` on each element of
+    # `weight_hankel` and `derivative_hankel`, so applying `.reduce()` is
+    # useless
+    begin('weight_hankel')
+    weight_hankel = matrix(depth, depth,
+                           [(hankel[i][j] / hankel[0][j] / hankel[i][0])
+                            for i in range(depth)
+                            for j in range(depth)])
+    end('weight_hankel')
 
     begin('derivative_hankel')
     derivative_hankel = weight_hankel.apply_map(lambda f: f.derivative(energy))
@@ -261,37 +253,26 @@ def find_possible_energy(depth_range, search_range):
         if stored_current_ranges is not None:
             current_ranges = stored_current_ranges
         else:
+            begin('generate functions')
+            functions = [
+                expected_distance(i, l, ring=QQ) for i in range(depth * 2 - 1)
+            ]
+            end('generate functions')
+            # Calculating determinant is faster in the fraction field of
+            # `QQ[]` than in `SR` when the variables are not substituted by
+            # the numbers.
+            begin('generate matrix')
+            hankel = matrix.hankel(functions[:depth],
+                                   functions[depth:depth * 2 - 1],
+                                   poly_int.fraction_field())
+            end('generate matrix')
+
             # It costs about 17 seconds for depth 10 to calculate the
             # determinant without replacing the variable with numbers.
             if depth >= 10:
-                begin('generate functions')
-                functions = [
-                    expected_distance(i, l)
-                    for i in range(depth * 2 - 1)
-                ]
-                end('generate functions')
-
-                begin('generate matrix')
-                hankel = matrix.hankel(functions[:depth],
-                                       functions[depth:depth * 2 - 1], SR)
-                end('generate matrix')
                 current_ranges = update_ranges_by_probing(
                     hankel, current_ranges, accepted_range_size)
             else:
-                begin('generate functions')
-                functions = [
-                    expected_distance(i, l, ring=QQ)
-                    for i in range(depth * 2 - 1)
-                ]
-                end('generate functions')
-                # Calculating determinant is faster in the fraction field of
-                # `QQ[]` than in `SR` when the variables are not substituted by
-                # the numbers.
-                begin('generate matrix')
-                hankel = matrix.hankel(functions[:depth],
-                                       functions[depth:depth * 2 - 1],
-                                       poly_int.fraction_field())
-                end('generate matrix')
                 current_ranges = update_ranges_by_solving_det(
                     hankel, current_ranges, search_range, hue_value)
             pprint([[Real20(low), Real20(high)] for low, high in current_ranges

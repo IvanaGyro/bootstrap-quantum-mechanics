@@ -1,8 +1,6 @@
 from sage.matrix.matrix_generic_dense import Matrix_generic_dense
-from sage.matrix.matrix_symbolic_dense import Matrix_symbolic_dense
 from sage.rings.infinity import infinity
 from sage.rings.real_mpfr import RealNumber
-from sage.symbolic.expression import Expression
 
 from precision import *
 
@@ -10,35 +8,26 @@ _zero = Real300(0)
 _infinity = Real300(infinity)
 
 
-def get_matrix_variable(mat: Matrix_symbolic_dense) -> Expression:
-    for i in range(mat.nrows()):
-        for j in range(mat.ncols()):
-            vars = mat[i][j].variables()
-            if len(vars):
-                return vars[0]
-    raise ValueError(f'No variable in the matrix. {mat}')
-
-
-def substitute_by_real(mat: Matrix_symbolic_dense,
+def substitute_by_real(mat: Matrix_generic_dense,
                        value: RealNumber) -> Matrix_generic_dense:
-    x = get_matrix_variable(mat)
-    return mat.substitute({x: value}).apply_map(Real300)
+    x = mat.base_ring().gen()
+    return mat.substitute({x: value})
 
 
-def evaluate_det(mat: Matrix_symbolic_dense, value: RealNumber) -> RealNumber:
+def evaluate_det(mat: Matrix_generic_dense, value: RealNumber) -> RealNumber:
     return substitute_by_real(mat, value).det()
 
 
-def evaluate_derivative_det(mat: Matrix_symbolic_dense,
-                            derivative_mat: Matrix_symbolic_dense,
+def evaluate_derivative_det(mat: Matrix_generic_dense,
+                            derivative_mat: Matrix_generic_dense,
                             value: RealNumber):
     # The determinant value is cached by Sagemath if the matrix isn't changed.
     return mat.det() * (mat.inverse() *
                         substitute_by_real(derivative_mat, value)).trace()
 
 
-def newton_method(mat: Matrix_symbolic_dense,
-                  derivative_mat: Matrix_symbolic_dense,
+def newton_method(mat: Matrix_generic_dense,
+                  derivative_mat: Matrix_generic_dense,
                   init_guess: RealNumber,
                   epsx: RealNumber,
                   x_range: tuple[RealNumber, RealNumber],
