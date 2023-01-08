@@ -19,34 +19,19 @@ poly_int = QQ['energy']
 
 
 @cache
-def expected_distance(n, l, ring=SR):
+def expected_distance(n, l):
     if n <= -2:
         return 0
     if n == 0:
         return 1
-    if ring != SR:
-        # It's faster to compose the functions in SR than in the polynomial
-        # ring over the real field
-        # XXX: Can we compose all the functions in `QQ['var']`?
-        f = expected_distance(n, l, SR)
-        begin(f'expected_distance({n}, {l}, {ring})')
-        f = f.fraction(ring)
-        f.reduce()
-        end(f'expected_distance({n}, {l}, {ring})')
-        return f
-    energy_symbol = SR.var(energy)
     if n == -1:
-        return -2 * energy_symbol
+        return -2 * energy
 
-    begin(f'expected_distance({n}, {l}, {ring})')
-    # `full_simplify()` significantly reduces the runtime of
-    # `f.fraction(RealField())`
-    f = ((
+    # `.reduce()` doesn't change anything, so it's no need to call it.
+    return (
         - 4 * (2 * (n + 1) - 1) * expected_distance(n - 1, l) \
         - n * ((n + 1) * (n - 1) - 4 * l * (l + 1)) * expected_distance(n - 2, l)
-        ) / (8 * (n + 1) * energy_symbol)).full_simplify()
-    end(f'expected_distance({n}, {l}, {ring})')
-    return f
+        ) / (8 * (n + 1) * energy)
 
 
 def intersections(a, b):
@@ -254,9 +239,7 @@ def find_possible_energy(depth_range, search_range):
             current_ranges = stored_current_ranges
         else:
             begin('generate functions')
-            functions = [
-                expected_distance(i, l, ring=QQ) for i in range(depth * 2 - 1)
-            ]
+            functions = [expected_distance(i, l) for i in range(depth * 2 - 1)]
             end('generate functions')
             # Calculating determinant is faster in the fraction field of
             # `QQ[]` than in `SR` when the variables are not substituted by
