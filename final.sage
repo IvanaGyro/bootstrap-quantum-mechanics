@@ -249,7 +249,6 @@ def update_ranges_by_solving_det(hankel, current_ranges, search_range,
 def find_possible_energy(depth_range, search_range):
     min_depth, max_depth = depth_range
     current_ranges = [list(search_range)]
-    offset = 0
     accepted_range_size = 10 ^ -5
 
     for depth in range(min_depth, max_depth + 1):
@@ -267,7 +266,7 @@ def find_possible_energy(depth_range, search_range):
             if depth >= 10:
                 begin('generate functions')
                 functions = [
-                    expected_distance(i + offset, l)
+                    expected_distance(i, l)
                     for i in range(depth * 2 - 1)
                 ]
                 end('generate functions')
@@ -281,7 +280,7 @@ def find_possible_energy(depth_range, search_range):
             else:
                 begin('generate functions')
                 functions = [
-                    expected_distance(i + offset, l, ring=QQ)
+                    expected_distance(i, l, ring=QQ)
                     for i in range(depth * 2 - 1)
                 ]
                 end('generate functions')
