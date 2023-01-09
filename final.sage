@@ -144,8 +144,7 @@ def update_ranges_by_probing(hankel, current_ranges, accepted_range_size):
                     print(
                         f'root out of range. root:{Real20(root)} range:{[Real20(prev_x), Real20(current_x)]}'
                     )
-                    show_interested_area(depth, weight_hankel,
-                                         [prev_x, current_x])
+                    plot_determinant(weight_hankel, [prev_x, current_x])
                     # pick middle temporary
                     root = (prev_x + current_x) / 2
                 if sign == 1:
@@ -286,5 +285,77 @@ def find_possible_energy(depth_range, search_range):
         save_and_show_graph(graph, f'{filename_prefix}-intersection_{i}.png')
 
 
+def plot_determinant(mat,
+                     x_range,
+                     title=None,
+                     filename=None,
+                     power_scale=Real300(0.001),
+                     plot_points=20,
+                     mode='native'):
+    '''Plot the determinant value of the symbolic matrix.
+
+    This method is useful for picking the enough precision. If the curve
+    fluctuates like a noise, a higher precision should be applied.
+    '''
+
+    def valuate(x):
+        det_value = evaluate_det(mat, Real300(x))
+        if power_scale != 1:
+            det_value = abs(det_value)**power_scale * sign(det_value)
+        return det_value
+
+    x_min, x_max = [Real300(x) for x in x_range]
+    if title is None:
+        title = f'l_{l}-depth_{mat.nrows()}-{[Real20(x) for x in x_range]}'
+    if filename is None:
+        filename = f'{title}.png'
+
+    if mode == 'native':
+        graph = plot(
+            valuate,
+            (x_min, x_max),
+            plot_points=plot_points,
+            title=title,
+        )
+    elif mode == 'interval':
+        step = (x_max - x_min) / (plot_points - 1)
+        x_list = [x_min + step * i for i in range(plot_points)]
+        points = [(x, valuate(x)) for x in x_list]
+        graph = list_plot(
+            points,
+            title=title,
+            plotjoined=True,
+        )
+    else:
+        raise ValueError(f'mode:{mode} is not supported.')
+    save_and_show_graph(graph, filename)
+
+
 if __name__ == '__main__':
     find_possible_energy((2, 5), (-0.7, 0.5))
+
+    interested_areas = {
+        # 14: [[-0.12952, -0.12501], [-0.035683, -0.027594],
+        #      [-0.024358, -0.0033258]],
+        # 60: [(-0.0070218, -1.4842e-7)],
+        # 80: [(-0.0070218, -1.4842e-7)],
+    }
+
+    for depth, x_ranges in interested_areas.items():
+        functions = [expected_distance(i, l) for i in range(depth * 2 - 1)]
+
+        hankel = matrix.hankel(functions[:depth],
+                               functions[depth:depth * 2 - 1],
+                               poly_int.fraction_field())
+
+        begin('weight_hankel')
+        weight_hankel = matrix(depth, depth,
+                               [(hankel[i][j] / hankel[0][j] / hankel[i][0])
+                                for i in range(depth)
+                                for j in range(depth)])
+        end('weight_hankel')
+
+        for x_range in x_ranges:
+            display_x_range = [Real20(x) for x in x_range]
+            title = f'weighted-l_{l}-depth_{depth}-{display_x_range}'
+            plot_determinant(weight_hankel, x_range, title=title)
