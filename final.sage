@@ -332,7 +332,7 @@ def plot_determinant(mat,
 
 
 if __name__ == '__main__':
-    find_possible_energy((2, 5), (-0.7, 0.5))
+    find_possible_energy((2, 80), (-0.7, 0.5))
 
     interested_areas = {
         # 14: [[-0.12952, -0.12501], [-0.035683, -0.027594],

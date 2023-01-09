@@ -14,16 +14,19 @@ def substitute_by_real(mat: Matrix_generic_dense,
     return mat.substitute({x: value})
 
 
-def evaluate_det(mat: Matrix_generic_dense, value: RealNumber) -> RealNumber:
-    return substitute_by_real(mat, value).det()
+def evaluate_det(mat: Matrix_generic_dense,
+                 value: RealNumber,
+                 algorithm='hessenberg') -> RealNumber:
+
+    return substitute_by_real(mat, value).det(algorithm=algorithm)
 
 
 def evaluate_derivative_det(mat: Matrix_generic_dense,
                             derivative_mat: Matrix_generic_dense,
                             value: RealNumber):
     # The determinant value is cached by Sagemath if the matrix isn't changed.
-    return mat.det() * (mat.inverse() *
-                        substitute_by_real(derivative_mat, value)).trace()
+    return mat.det(algorithm='hessenberg') * (
+        mat.inverse() * substitute_by_real(derivative_mat, value)).trace()
 
 
 def newton_method(mat: Matrix_generic_dense,
@@ -36,7 +39,7 @@ def newton_method(mat: Matrix_generic_dense,
     current_guess = init_guess
     iterates = [current_guess]
     real_matrix = substitute_by_real(mat, current_guess)
-    fc = real_matrix.det()
+    fc = real_matrix.det(algorithm='hessenberg')
     first_evaluation = fc
     for _ in range(maxiter - 1):
         # Comparisons between RealField numbers of the same precision are 6
@@ -59,5 +62,5 @@ def newton_method(mat: Matrix_generic_dense,
             if try_max - try_min < epsx:
                 break
         real_matrix = substitute_by_real(mat, current_guess)
-        fc = real_matrix.det()
+        fc = real_matrix.det(algorithm='hessenberg')
     return current_guess, first_evaluation, iterates
