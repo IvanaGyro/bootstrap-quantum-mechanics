@@ -331,6 +331,16 @@ def plot_determinant(mat,
     save_and_show_graph(graph, filename)
 
 
+def print_determinant(mat, x, precisions=None):
+    '''Print determinant under different precisions.'''
+    
+    if precisions is None:
+        precisions = [100, 300, 600, 1000, 3000, 6000, 100000]
+    for precision in precisions:
+        det_value = evaluate_det(mat, RealField(precision)(x))
+        print(f'precision:{precision} x:{Real20(x)} {Real20(det_value)}')
+
+
 if __name__ == '__main__':
     find_possible_energy((2, 80), (-0.7, 0.5))
 
@@ -356,6 +366,7 @@ if __name__ == '__main__':
         end('weight_hankel')
 
         for x_range in x_ranges:
+            print_determinant(weight_hankel, x_range[-1])
             display_x_range = [Real20(x) for x in x_range]
             title = f'weighted-l_{l}-depth_{depth}-{display_x_range}'
             plot_determinant(weight_hankel, x_range, title=title)
