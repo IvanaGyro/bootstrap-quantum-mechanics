@@ -7,6 +7,9 @@ __pycache__
 ## Sage
 *.sage.py
 
+## VS Code
+.vscode/
+
 ## this project
 dumps/
 images/
